@@ -33,6 +33,8 @@ anything together:
 import re
 import statistics
 
+PUNCTUATION_TARGET_DENSITY = 0.1
+
 
 def sentences(text: str) -> list[str]:
     """Split into sentences. Rough and good enough — given to you."""
@@ -64,8 +66,15 @@ def sentence_length_spread(text: str) -> float:
     `stdev` raises on fewer than two values. Decide what that should return
     before the attack set decides for you.
     """
-    # TODO: replace this
-    return 0.0
+    lengths = [len(words(sentence)) for sentence in sentences(text)]
+    lengths = [length for length in lengths if length > 0]
+    if len(lengths) < 2:
+        return 0.0
+
+    mean_length = statistics.mean(lengths)
+    if mean_length == 0:
+        return 0.0
+    return statistics.stdev(lengths) / mean_length
 
 
 def type_token_ratio(text: str) -> float:
@@ -80,8 +89,10 @@ def type_token_ratio(text: str) -> float:
     directly comparable on it, and if your test inputs vary a lot in length,
     that alone can look like a signal.
     """
-    # TODO: replace this
-    return 0.0
+    tokens = words(text)
+    if not tokens:
+        return 0.0
+    return len(set(tokens)) / len(tokens)
 
 
 def punctuation_density(text: str) -> float:
@@ -94,8 +105,10 @@ def punctuation_density(text: str) -> float:
         more interesting than full stops, because they vary more between
         writers.
     """
-    # TODO: replace this
-    return 0.0
+    if not text:
+        return 0.0
+    punctuation_count = sum(1 for character in text if not character.isalnum() and not character.isspace())
+    return punctuation_count / len(text)
 
 
 # ── Combining them ───────────────────────────────────────────────────────────
@@ -122,8 +135,19 @@ def style_signal(text: str) -> float:
     you trust it. Plain and ordinary, not formal: formal prose reads as *human*
     to signal one, and it is plain writing that gets accused.
     """
-    # TODO: replace this
-    return 0.5
+    if not text.strip():
+        return 0.5
+
+    spread = sentence_length_spread(text)
+    vocabulary_reuse = 1.0 - type_token_ratio(text)
+    punctuation_signal = 1.0 - min(
+        punctuation_density(text) / PUNCTUATION_TARGET_DENSITY,
+        1.0,
+    )
+    spread_signal = 1.0 / (1.0 + spread)
+
+    score = statistics.mean((spread_signal, vocabulary_reuse, punctuation_signal))
+    return round(min(max(score, 0.0), 1.0), 4)
 
 
 if __name__ == "__main__":
