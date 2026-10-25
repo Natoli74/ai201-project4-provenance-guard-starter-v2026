@@ -44,11 +44,13 @@ Two things worth knowing before you pick numbers:
 ---
 ## 1.
 
-<!-- Your criterion. It must name a number. -->
+Of 10 clearly human submissions, at most 1 may receive the high-confidence AI
+label in each evaluation trial.
 
-
-
-**Why this target:**
+**Why this target:** A false accusation harms a real writer more than allowing
+some AI text to pass, so the system should strongly favor avoiding false
+positives. Allowing 1 in 10 leaves room for an imperfect detector while making
+the human-safety requirement measurable.
 
 
 
@@ -56,11 +58,14 @@ Two things worth knowing before you pick numbers:
 
 ## 2.
 
-<!-- Your criterion. -->
+Across a matched set of clearly AI-written and clearly human-written samples,
+the mean combined score for the AI set must be at least 0.20 higher than the
+mean combined score for the human set.
 
-
-
-**Why this target:**
+**Why this target:** A measurable gap shows that the signals provide useful
+separation rather than producing nearly identical scores for every text. A
+0.20 gap is demanding enough to reveal weak scoring while still allowing
+overlap for ambiguous writing and model variability.
 
 
 
@@ -68,11 +73,14 @@ Two things worth knowing before you pick numbers:
 
 ## 3.
 
-<!-- Your criterion. -->
+All three labels—`human`, `unsure`, and `ai`—must be reachable by at least one
+valid submission, with the returned `guess` and reader-facing `label` matching
+the corresponding score range.
 
-
-
-**Why this target:**
+**Why this target:** A label that cannot be produced is dead code and prevents
+the service from expressing the uncertainty its thresholds are meant to
+represent. Requiring all three labels preserves both confident decisions and a
+safer middle outcome for borderline cases.
 
 
 
@@ -80,11 +88,15 @@ Two things worth knowing before you pick numbers:
 
 ## 4.
 
-<!-- Your criterion. -->
+For every valid submitted `content_id`, a valid appeal with non-empty
+`reasoning` must return HTTP 200, append an appeal event to the audit log, and
+leave the item with status `under_review`; an unknown `content_id` must return
+a 4xx response without creating an appeal event.
 
-
-
-**Why this target:**
+**Why this target:** Writers need a reliable way to challenge a wrong
+classification, and the append-only record must make that challenge visible
+without erasing the original decision. Rejecting unknown IDs prevents
+orphaned appeals and keeps the audit trail tied to real submissions.
 
 
 
@@ -92,11 +104,15 @@ Two things worth knowing before you pick numbers:
 
 ## 5.
 
-<!-- Your criterion. -->
+Empty, whitespace-only, missing, or non-string `text` must receive a 4xx JSON
+error without scoring or creating a decision log entry, while an enormous
+submission of at least 1,000,000 characters must be rejected or safely capped
+without a 5xx response.
 
-
-
-**Why this target:**
+**Why this target:** Invalid input should produce a clear client error rather
+than a crash, misleading label, or unexplained audit record. Bounding enormous
+text protects latency and memory, while accepting either rejection or an
+explicit safe cap keeps the service predictable under stress.
 
 
 
