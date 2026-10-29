@@ -86,13 +86,23 @@ def log_appeal(content_id: str, creator_id: str, reasoning: str) -> dict:
         "timestamp": _now(),
         "content_id": content_id,
         "creator_id": creator_id,
+        "guess": None,
+        "model_score": None,
+        "style_score": None,
+        "combined_score": None,
+        "label": None,
         "event": "appeal",
         "status": "under_review",
         "reasoning": reasoning,
     })
 
 
-def log_rejection(creator_id: str, reason: str, **extra) -> dict:
+def log_rejection(
+    creator_id: str,
+    reason: str,
+    content_id: str | None = None,
+    **extra,
+) -> dict:
     """
     Record a request that never became a decision — a rate-limit rejection or
     an input your route refused.
@@ -104,7 +114,13 @@ def log_rejection(creator_id: str, reason: str, **extra) -> dict:
     """
     return _append({
         "timestamp": _now(),
+        "content_id": content_id,
         "creator_id": creator_id,
+        "guess": None,
+        "model_score": None,
+        "style_score": None,
+        "combined_score": None,
+        "label": None,
         "event": "rejected",
         "status": "rejected",
         "reason": reason,

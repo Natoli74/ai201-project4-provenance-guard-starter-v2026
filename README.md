@@ -59,6 +59,13 @@ An author can send the returned `content_id` and a written explanation to
 `POST /appeal`. The original decision remains in the append-only audit log and
 the appeal adds an `under_review` event.
 
+Submissions are rate limited to **10 per minute** and **200 per day** per
+creator (or caller address when no creator ID is available). Ten per minute
+allows a writer to revise and resubmit several times without waiting, while
+200 per day supports a full working day of experimentation and makes bulk
+threshold mapping substantially slower. Rejected requests are recorded in the
+audit log with the same nine-field shape as decisions.
+
 ---
 
 ## Signals and Scoring
@@ -398,7 +405,7 @@ that produced it:
 
      SUBMISSION CHECKLIST — unit 8
 
-       [ ] Rate limiting on /submit, with your numbers justified
+       [x] Rate limiting on /submit, with your numbers justified
        [ ] The pasted run of status codes showing 429
        [ ] Audit log with all nine fields, recording rejections too
        [ ] The attack set run IN FULL, every input with an outcome
