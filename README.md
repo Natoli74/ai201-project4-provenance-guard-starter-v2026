@@ -303,8 +303,129 @@ can look like one. -->
 <!-- Choose entries that show the interesting failures, not the ten easiest. -->
 
 ```json
-
+[
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "8c797d03-6df3-4834-b810-30d798bb5fbb",
+    "creator_id": "attacker_EV08",
+    "guess": "unsure",
+    "model_score": 0.2452,
+    "style_score": 0.4906,
+    "combined_score": 0.3679,
+    "label": "The evidence is mixed, so we cannot confidently identify the author.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "ba1e7250-eb27-4626-bafc-cf2f87ebe29a",
+    "creator_id": "attacker_EV09",
+    "guess": "unsure",
+    "model_score": 0.7042,
+    "style_score": 0.5328,
+    "combined_score": 0.6185,
+    "label": "The evidence is mixed, so we cannot confidently identify the author.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "806dec0e-bd52-409c-95f5-eba78ffc89b7",
+    "creator_id": "attacker_EV10",
+    "guess": "ai",
+    "model_score": 0.9792,
+    "style_score": 0.7806,
+    "combined_score": 0.8799,
+    "label": "We think this was probably written by an AI system.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "950fdf67-e460-48f9-b830-ae313ac4b4af",
+    "creator_id": "attacker_FP01",
+    "guess": "unsure",
+    "model_score": 0.6175,
+    "style_score": 0.5954,
+    "combined_score": 0.6065,
+    "label": "The evidence is mixed, so we cannot confidently identify the author.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "9342fa3a-da0f-402f-8bbd-ab7aa71b7bb0",
+    "creator_id": "attacker_FP02",
+    "guess": "ai",
+    "model_score": 0.7387,
+    "style_score": 0.6427,
+    "combined_score": 0.6907,
+    "label": "We think this was probably written by an AI system.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "74c303b8-20ca-4245-a5d3-57bd557b46ae",
+    "creator_id": "attacker_FP03",
+    "guess": "ai",
+    "model_score": 0.8051,
+    "style_score": 0.6208,
+    "combined_score": 0.7129,
+    "label": "We think this was probably written by an AI system.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "c562ba09-615f-4442-b27c-ea60c97369ff",
+    "creator_id": "attacker_PI02",
+    "guess": "human",
+    "model_score": 0.2044,
+    "style_score": 0.4464,
+    "combined_score": 0.3254,
+    "label": "We think this was probably written by a person.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:03+00:00",
+    "content_id": "06bbe13b-7fc4-43e4-88bc-d3f3d0e6afcf",
+    "creator_id": "attacker_MF03",
+    "guess": "human",
+    "model_score": 0.0,
+    "style_score": 0.3333,
+    "combined_score": 0.1666,
+    "label": "We think this was probably written by a person.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:04+00:00",
+    "content_id": "b9153913-8aa0-4587-a535-19c5a079fd0a",
+    "creator_id": "attacker_MF08",
+    "guess": "ai",
+    "model_score": 0.9876,
+    "style_score": 0.8343,
+    "combined_score": 0.911,
+    "label": "We think this was probably written by an AI system.",
+    "status": "decided"
+  },
+  {
+    "timestamp": "2026-10-29T18:47:04+00:00",
+    "content_id": null,
+    "creator_id": "attacker_flood",
+    "guess": null,
+    "model_score": null,
+    "style_score": null,
+    "combined_score": null,
+    "label": null,
+    "event": "rejected",
+    "status": "rejected",
+    "reason": "rate_limited",
+    "limit": "10 per 1 minute"
+  }
+]
 ```
+
+The excerpt includes EV08 (below-token-window evasion), EV09 (human opening
+added to AI text), EV10 (repeated stanza structure), FP01/FP02/FP03 (human
+writing that produced unsure or AI outcomes), PI02 (prompt-injection text
+classified as human), MF03 (control characters), MF08 (60,000-character
+input), and a flood request rejected with HTTP 429. The rejection has null
+decision scores because no submission was evaluated.
 
 **The single worst outcome** — the one I'd least want to explain to a writer
 whose work got caught by it:
