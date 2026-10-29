@@ -143,9 +143,9 @@ reducing the chance that one weak clue becomes a confident accusation.
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human | 0.00 – 0.35 inclusive | We think this was probably written by a person. |
-| unsure | above 0.35 and below 0.65 | The evidence is mixed, so we cannot confidently identify the author. |
-| high-confidence AI | 0.65 – 1.00 inclusive | We think this was probably written by an AI system. |
+| high-confidence human | 0.00 – 0.30 inclusive | We think this was probably written by a person. |
+| unsure | above 0.30 and below 0.75 | The evidence is mixed, so we cannot confidently identify the author. |
+| high-confidence AI | 0.75 – 1.00 inclusive | We think this was probably written by an AI system. |
 
 **Why I worded the "unsure" one this way:**
 <!-- It's the hardest of the three. It has to admit uncertainty without
@@ -441,21 +441,22 @@ cluster.
 
 <!-- Your five criteria across three trials. `run_eval.py --label before`. -->
 
-| Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
-|---|---|---|---|---|---|
-| 1. False positives | At most 1 of 10 clearly human submissions receives `ai` | 1/10 `ai` | 1/10 `ai` | 1/10 `ai` | PASS |
-| 2. Score spread | AI mean combined score at least 0.20 above human mean | Not measured by starter label-coverage inputs | Not measured by starter label-coverage inputs | Not measured by starter label-coverage inputs | NOT MEASURED |
-| 3. Label coverage | `human`, `unsure`, and `ai` each reachable | Pending scenario run | Pending scenario run | Pending scenario run | NOT RUN |
-| 4. Appeal behavior | Valid appeal 200 and `under_review`; unknown ID 4xx | Pending scenario run | Pending scenario run | Pending scenario run | NOT RUN |
-| 5. Bad input | Invalid text 4xx; huge input no 5xx | Pending scenario run | Pending scenario run | Pending scenario run | NOT RUN |
+| Criterion | Target | Before (3 trials) | After (3 trials) | Verdict after fix |
+|---|---|---|---|---|
+| 1. False positives | At most 1 of 10 clearly human submissions receives `ai` | 1/10 `ai` in each trial | 0/10 `ai` in each trial; all 10 `unsure` | PASS |
+| 2. Score spread | AI mean combined score at least 0.20 above human mean | Not measured: starter scenario was not matched | AI mean 0.4685; human mean 0.5227; gap -0.0542 in each trial | MISS |
+| 3. Label coverage | `human`, `unsure`, and `ai` each reachable | Not run | `unsure, unsure, unsure` in each trial | MISS |
+| 4. Appeal behavior | Valid appeal 200 and `under_review`; unknown ID 4xx | Not run | Submit 200; appeal 200/`under_review`; unknown appeal 404 in each trial | PASS |
+| 5. Bad input | Invalid text 4xx; huge input no 5xx | Not run | First five inputs 400; 1,000,000-character input 200 with no 5xx in each trial | PASS* |
 
 The before run was produced by
-`results/run_2026-10-29_1419_before.md`. Criterion 1 produced the same
-distribution in all three trials: 1 high-confidence AI label, 8 unsure
-labels, and 1 human label. The starter second scenario was named “label
-coverage,” so it did not provide the matched AI-versus-human sets required to
-measure criterion 2; that criterion is deferred until the full scenarios are
-defined below.
+`results/run_2026-10-29_1419_before.md`; the after run is
+`results/run_2026-10-29_1447_after.md`. The after attack run is
+`results/attack_run_2026-10-29_1447_after.md`. The original before run used
+the starter scenarios, so criteria 2–5 have no comparable before measurement.
+The one-million-character input was accepted at the exact maximum and
+processed through the detector's 400-token cap, so it avoided a 5xx; this is
+the safe-cap interpretation of criterion 5.
 
 **Real output from one trial**, pasted as text, naming the file and function
 that produced it:
@@ -545,22 +546,38 @@ that produced it:
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** Widened the unsure band in `config.py` from
+`0.35–0.65` to `0.30–0.75`. The signal weights and route were unchanged.
 
-**Which diagnosis pointed at it:**
+**Which diagnosis pointed at it:** FP02–FP07 were human formal, careful, or
+technical writing with combined scores from 0.691 to 0.749. The label mapping
+turned those model-driven scores into high-confidence AI accusations. Moving
+the AI threshold to 0.75 converts that cluster to `unsure` rather than
+claiming certainty.
 
 ### Attack Run — After
 
 <!-- Same format. `run_attacks.py --label after` -->
 
-
+The complete after run is in
+`results/attack_run_2026-10-29_1447_after.md`. It produced 56/56 responses
+without crashes: 54 HTTP 200 responses and two HTTP 429 rate-limit
+rejections. EV10 remained `ai` at 0.760, while FP02–FP07 changed from `ai` to
+`unsure` without changing their scores. The malformed and prompt-injection
+families otherwise retained the same route behavior.
 
 **Did it help, and how do I know:**
 
 <!-- Widening the unsure band usually fixes one problem and creates another.
      Reporting that trade honestly is worth full credit. -->
 
-
+It helped the false-positive target: the human-writing evaluation changed from
+1/10 high-confidence AI labels in every trial to 0/10. It also changed the
+false-positive attack cluster from six `ai` outcomes to six `unsure` outcomes.
+The trade is visible in label coverage: all three label-coverage samples were
+`unsure` in all three after trials, so the `human` and `ai` labels were no
+longer demonstrated by that scenario. The matched score-separation criterion
+also still missed: the AI mean was 0.4685 versus 0.5227 for human text.
 
 ---
 
@@ -569,13 +586,25 @@ that produced it:
 <!-- For each attack still getting through and each criterion still missed:
      what you'd do, and why you stopped. -->
 
-
+The score-separation and label-coverage criteria remain broken because the
+signals do not separate the chosen samples reliably; widening thresholds only
+changes the label boundary, not the underlying scores. EV01–EV09 still land
+in the unsure band, so the detector remains vulnerable to surface edits,
+unusual vocabulary, shortened context, and mixed-origin text. MF03–MF08 still
+reach scoring even though they are malformed, and MF08 remains accepted at the
+exact one-million-character boundary. The appeal workflow, route-level
+malformed requests, and rate-limit rejection remain working.
 
 **The trade I'd make if this ran for real:**
 
 <!-- Two sentences. Fewer wrong accusations means more AI text getting through.
      Say which way you'd go and WHO PAYS FOR IT. -->
 
+I would keep the wider band for a real writing service because a false
+high-confidence accusation makes the writer pay for model uncertainty. The
+cost is that genuinely AI-written or borderline submissions may receive
+`unsure`, so reviewers and the service absorb more manual follow-up and some
+AI text gets through.
 
 
 <!-- ═════════════════════════════════════════════════════════════════════

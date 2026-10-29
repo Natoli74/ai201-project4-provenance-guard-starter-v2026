@@ -71,8 +71,10 @@ WEIGHT_STYLE_SIGNAL = 0.5
 # getting through. There is no setting that avoids the trade — only settings
 # that decide who pays for it.
 
-HUMAN_THRESHOLD = 0.35
-AI_THRESHOLD = 0.65
+# Keep the high-confidence labels for more extreme scores. The wider unsure
+# band reduces costly false accusations from formal or careful human prose.
+HUMAN_THRESHOLD = 0.30
+AI_THRESHOLD = 0.75
 
 # ⚠️ One thing that catches people out in Milestone 5. A weighted average can
 # only land between its two inputs — so while `style_signal` is still the stub
