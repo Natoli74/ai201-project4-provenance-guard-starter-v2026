@@ -263,13 +263,38 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
   equal weights from `config.py`, added explicit full-sentence labels, and
   verified the response and `under_review` audit event with focused smoke tests.
 
+**Moment 3**
+
+- *What I asked for:* “Check the rate-limit and audit-log requirements, then
+  help extract representative attack entries and define scenarios for all five
+  acceptance criteria.”
+- *What came back:* Suggestions for enabling the limiter, recording rejected
+  requests with the complete nine-field schema, selecting ten varied audit
+  records, and exercising false positives, score separation, label coverage,
+  appeals, and malformed input.
+- *What I changed:* I checked each suggestion against the existing route,
+  audit format, criteria, and generated reports. I kept the implementation
+  changes surgical and used the actual attack output rather than treating
+  suggestions as test results.
+
+**Moment 4**
+
+- *What I asked for:* “Diagnose the before results by pipeline stage, choose
+  one targeted fix, and compare before and after.”
+- *What came back:* The false-positive cluster pointed to the label-mapping
+  thresholds, while score separation remained a signal-quality problem.
+- *What I changed:* I chose and verified one threshold-only fix: widening the
+  unsure band from `0.35–0.65` to `0.30–0.75`. I ran the attack and evaluation
+  commands, reviewed their generated reports, and wrote the final conclusions
+  and tradeoff myself.
+
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
 ---
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 10 per minute, 200 per day
 
 **Why those numbers and not others:**
 <!-- Think about two people: a real writer submitting their own work a few
@@ -277,17 +302,26 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
      thresholds. Your numbers have to be liveable for the first and hostile to
      the second. -->
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+Ten submissions per minute allows a writer to revise and resubmit several
+times without an unreasonable wait, while 200 per day supports a full working
+day of legitimate experimentation. The limits slow automated threshold
+mapping and submission floods without preventing normal use.
+
+**What a caller counts as:** `creator_id` when present; otherwise the caller's
+remote address. This makes repeated submissions from one creator count
+together while still limiting malformed or anonymous requests.
 
 **The run of status codes when I pushed past it:**
 
 <!-- python run_attacks.py --flood 15 -->
 
 ```
-
+FL01_01–FL01_10: 200
+FL01_11–FL01_12: 429
 ```
+
+The complete 56-request after run, including every status and outcome, is in
+`results/attack_run_2026-10-29_1447_after.md`.
 
 ---
 
@@ -595,6 +629,25 @@ reach scoring even though they are malformed, and MF08 remains accepted at the
 exact one-million-character boundary. The appeal workflow, route-level
 malformed requests, and rate-limit rejection remain working.
 
+The after run also exposes two specific limitations. First, the matched
+score-separation trial produced an AI mean of `0.4685` and a human mean of
+`0.5227`, a gap of `-0.0542` rather than the required `+0.20`; this is a
+signal-quality problem, not a threshold problem. Second, all three label
+coverage samples returned `unsure` in all three trials after the fix, so the
+service no longer demonstrated reachable `human` and `ai` labels with that
+sample set. I stopped after one targeted change rather than tuning until the
+tests passed, because changing several thresholds or signals would make the
+before/after comparison harder to interpret.
+
+The malformed-input policy is only partly resolved. Missing, empty, null, and
+wrong-type text is rejected at the route with HTTP 400, and the million-
+character boundary completes without a 5xx because the detector limits its
+work to 400 tokens. However, control characters, punctuation-only text,
+emoji-only text, right-to-left text, very long words, and 60,000-character
+text are still scored. A production version should add explicit content
+sanity checks and a lower operational payload limit rather than relying only
+on the detector token window.
+
 **The trade I'd make if this ran for real:**
 
 <!-- Two sentences. Fewer wrong accusations means more AI text getting through.
@@ -605,7 +658,6 @@ high-confidence accusation makes the writer pay for model uncertainty. The
 cost is that genuinely AI-written or borderline submissions may receive
 `unsure`, so reviewers and the service absorb more manual follow-up and some
 AI text gets through.
-
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
@@ -626,16 +678,16 @@ AI text gets through.
      SUBMISSION CHECKLIST — unit 8
 
        [x] Rate limiting on /submit, with your numbers justified
-       [ ] The pasted run of status codes showing 429
-       [ ] Audit log with all nine fields, recording rejections too
-       [ ] The attack set run IN FULL, every input with an outcome
-       [ ] Ten audit log entries pasted as text
-       [ ] Five criteria across three trials
-       [ ] A diagnosis for every miss and every broken attack — stage AND mechanism
-       [ ] One improvement, with Attack Run — After
-       [ ] What's Still Broken, including the production trade
-       [ ] At least four new commits
-       [ ] The SAME repository URL as last unit
+       [x] The pasted run of status codes showing 429
+       [x] Audit log with all nine fields, recording rejections too
+       [x] The attack set run IN FULL, every input with an outcome
+       [x] Ten audit log entries pasted as text
+       [x] Five criteria across three trials
+       [x] A diagnosis for every miss and every broken attack — stage AND mechanism
+       [x] One improvement, with Attack Run — After
+       [x] What's Still Broken, including the production trade
+       [x] At least four new commits
+       [x] The SAME repository URL as last unit
 
      Do not delete and recreate this repository.
      ═════════════════════════════════════════════════════════════════════ -->
