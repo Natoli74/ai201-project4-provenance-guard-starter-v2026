@@ -440,11 +440,19 @@ whose work got caught by it:
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
+| 1. False positives | At most 1 of 10 clearly human submissions receives `ai` | 1/10 `ai` | 1/10 `ai` | 1/10 `ai` | PASS |
+| 2. Score spread | AI mean combined score at least 0.20 above human mean | Not measured by starter label-coverage inputs | Not measured by starter label-coverage inputs | Not measured by starter label-coverage inputs | NOT MEASURED |
 | 3.  |  |  |  |  |  |
 | 4.  |  |  |  |  |  |
 | 5.  |  |  |  |  |  |
+
+The before run was produced by
+`results/run_2026-10-29_1419_before.md`. Criterion 1 produced the same
+distribution in all three trials: 1 high-confidence AI label, 8 unsure
+labels, and 1 human label. The starter second scenario was named “label
+coverage,” so it did not provide the matched AI-versus-human sets required to
+measure criterion 2; that criterion is deferred until the full scenarios are
+defined below.
 
 **Real output from one trial**, pasted as text, naming the file and function
 that produced it:

@@ -52,15 +52,56 @@ def bodies_for(scenario):
     """
     if scenario.get("bodies"):
         return list(scenario["bodies"])
+    if scenario.get("samples"):
+        return [
+            {
+                "text": sample["text"],
+                "creator_id": f"eval_{scenario['name'][:12]}_{i}",
+                "_group": sample["group"],
+            }
+            for i, sample in enumerate(scenario["samples"], 1)
+        ]
     return [
         {"text": text, "creator_id": f"eval_{scenario['name'][:12]}_{i}"}
         for i, text in enumerate(scenario["texts"], 1)
     ]
 
 
+def appeal_results(scenario, url, requests, timeout):
+    """Submit once, appeal the returned ID, then test an unknown ID."""
+    submission = requests.post(
+        f"{url}/submit",
+        json={"text": scenario["text"], "creator_id": scenario["creator_id"]},
+        timeout=timeout,
+    )
+    submission_payload = submission.json() if submission.content else {}
+    content_id = submission_payload.get("content_id")
+    appeal = requests.post(
+        f"{url}/appeal",
+        json={"content_id": content_id, "reasoning": scenario["reasoning"]},
+        timeout=timeout,
+    )
+    unknown = requests.post(
+        f"{url}/appeal",
+        json={
+            "content_id": scenario["unknown_content_id"],
+            "reasoning": scenario["reasoning"],
+        },
+        timeout=timeout,
+    )
+    return [{
+        "submission_status": submission.status_code,
+        "content_id": content_id,
+        "appeal_status": appeal.status_code,
+        "appeal_payload": appeal.json() if appeal.content else {},
+        "unknown_appeal_status": unknown.status_code,
+        "unknown_appeal_payload": unknown.json() if unknown.content else {},
+    }]
+
+
 def describe(body):
     """A short, readable note of what was sent — for the report."""
-    if set(body) == {"text", "creator_id"} and isinstance(body.get("text"), str):
+    if isinstance(body.get("text"), str):
         text = body["text"]
         return text[:70] if text else "(empty text)"
     return json.dumps(body)[:120]
@@ -112,6 +153,15 @@ def main():
 
         trials = []
         for trial in range(1, args.trials + 1):
+            if scenario.get("workflow") == "appeal":
+                try:
+                    results = appeal_results(scenario, args.url, requests, args.timeout)
+                except Exception as exc:  # noqa: BLE001
+                    results = [{"status": None, "error": f"{type(exc).__name__}: {exc}"}]
+                trials.append(results)
+                print(f"  trial {trial}: appeal workflow completed")
+                continue
+
             results = []
             for i, body in enumerate(bodies_for(scenario), 1):
                 preview = describe(body)
@@ -126,6 +176,7 @@ def main():
                         "model_score": payload.get("model_score"),
                         "style_score": payload.get("style_score"),
                         "label": payload.get("label"),
+                        "group": body.get("_group"),
                         "sent": preview,
                     })
                 except Exception as exc:  # noqa: BLE001
