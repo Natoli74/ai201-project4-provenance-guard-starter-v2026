@@ -430,7 +430,10 @@ decision scores because no submission was evaluated.
 **The single worst outcome** — the one I'd least want to explain to a writer
 whose work got caught by it:
 
-
+FP03: a carefully written non-native-English sample was labelled `ai` with a
+combined score of 0.713. This is a false accusation, not merely an unsure
+result, and it is consistent with the broader formal-writing false-positive
+cluster.
 
 ---
 
@@ -442,9 +445,9 @@ whose work got caught by it:
 |---|---|---|---|---|---|
 | 1. False positives | At most 1 of 10 clearly human submissions receives `ai` | 1/10 `ai` | 1/10 `ai` | 1/10 `ai` | PASS |
 | 2. Score spread | AI mean combined score at least 0.20 above human mean | Not measured by starter label-coverage inputs | Not measured by starter label-coverage inputs | Not measured by starter label-coverage inputs | NOT MEASURED |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 3. Label coverage | `human`, `unsure`, and `ai` each reachable | Pending scenario run | Pending scenario run | Pending scenario run | NOT RUN |
+| 4. Appeal behavior | Valid appeal 200 and `under_review`; unknown ID 4xx | Pending scenario run | Pending scenario run | Pending scenario run | NOT RUN |
+| 5. Bad input | Invalid text 4xx; huge input no 5xx | Pending scenario run | Pending scenario run | Pending scenario run | NOT RUN |
 
 The before run was produced by
 `results/run_2026-10-29_1419_before.md`. Criterion 1 produced the same
@@ -477,6 +480,65 @@ that produced it:
 
      Look for a pattern. Five failures on one signal is one problem, not five. -->
 
+
+### Criteria
+
+- **Criterion 1 — false positives: no miss in the before evaluation.** The
+  route accepted all ten valid samples, and the label mapping produced one
+  `ai`, eight `unsure`, and one `human` result in every trial. The one AI
+  label is exactly the allowed maximum, so this criterion passes, although the
+  FP03/FP04-style attack results show little safety margin.
+- **Criterion 2 — score spread: not measured.** The earlier run used the
+  placeholder “label coverage” scenario rather than a matched AI/human set, so
+  there is no valid before mean comparison. No pipeline stage can be blamed
+  until the completed grouped scenario is run.
+- **Criteria 3–5: not measured yet.** The completed scenarios now define label,
+  appeal, and bad-input checks, but no three-trial results exist for them. Their
+  eventual diagnosis must use the observed stage and response rather than a
+  prediction.
+
+### Attack failures
+
+- **EV01, EV02, EV03, EV06, and EV07 — signal two / stylometry.** These
+  evasion inputs manipulated typos, sentence boundaries, quotations, sentence
+  length, or punctuation. The style signal treats those surface changes as
+  human-like variation, lowering the combined scores to 0.087–0.226. The
+  route and detector did not fail; the style feature is measuring the
+  attacker-controlled surface form instead of authorship.
+- **EV04 and EV08 — signal one / model signal.** Unusual words increased
+  perplexity, and the below-window construction limited the model's view of
+  the text. That reduced the model signal enough that both requests landed in
+  the unsure range, so the detector could not preserve evidence from the
+  rest of the text.
+- **EV05 and EV09 — combining rule.** Human edits or a human opening paragraph
+  changed both inputs enough to pull the equal-weight average below the
+  high-confidence AI threshold. The route processed the full requests, but
+  `0.5 * model_score + 0.5 * style_score` diluted the remaining AI-like
+  evidence into `unsure`.
+- **FP02–FP07 — signal one / model signal, amplified by label mapping.**
+  Formal, careful, technical, templated, or deliberately repetitive human
+  prose received high model scores (0.739–0.882). The combining rule kept
+  those scores above the AI threshold, and the label mapping therefore
+  converted predictability into a high-confidence AI accusation. This is the
+  primary false-positive cluster.
+- **PI01–PI06 — signal interpretation, not route security.** The route
+  correctly treated the prompt text as ordinary content and returned 200; it
+  did not execute the embedded instructions. However, the detector has no
+  semantic prompt-injection stage, so the wording still changes the model and
+  style signals. PI02 reached `human` because its wording lowered the
+  combined score to 0.325, while the other cases mostly became `unsure`.
+- **MF03–MF08 — route validation boundary.** The route validates type,
+  non-emptiness, and a one-million-character maximum, but does not reject
+  control characters, punctuation-only text, emoji, right-to-left text, very
+  long words, or 60,000-character input. Those requests therefore reached
+  both signals and received ordinary decisions instead of a 4xx. This is a
+  validation-policy gap, not a detector crash; RQ01–RQ12 correctly stopped at
+  the route with 400 responses.
+- **FL01_11 and FL01_12 — no failure; rate limiter held.** After ten accepted
+  submissions for `attacker_flood`, the limiter rejected subsequent requests
+  with 429 before scoring. The rejection handler recorded `status: "rejected"`
+  and `reason: "rate_limited"`, so neither the route nor the audit stage lost
+  the event.
 
 
 ---
